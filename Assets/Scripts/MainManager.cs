@@ -11,21 +11,34 @@ public class MainManager : MonoBehaviour
     public Rigidbody Ball;
 
     public Text ScoreText;
+    public Text HighScoreText; //
+    public int HighScoreCount;
+    public string PlayerName = "NotSet";
     public GameObject GameOverText;
-    
+
     private bool m_Started = false;
     private int m_Points;
-    
+
     private bool m_GameOver = false;
 
-    
+
     // Start is called before the first frame update
     void Start()
     {
+        if (PlayerPrefs.HasKey("ppHighScoreCount"))
+        {
+            LoadData();
+        }
+        else
+        {
+            PlayerName = "TempUser";
+            HighScoreCount = 0;
+        }
+
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
-        
-        int[] pointCountArray = new [] {1,1,2,2,5,5};
+
+        int[] pointCountArray = new[] { 1, 1, 2, 2, 5, 5 };
         for (int i = 0; i < LineCount; ++i)
         {
             for (int x = 0; x < perLine; ++x)
@@ -40,6 +53,20 @@ public class MainManager : MonoBehaviour
 
     private void Update()
     {
+        if (Input.GetKeyDown(KeyCode.L))
+        {
+            LoadData();
+        }
+        if (Input.GetKeyDown(KeyCode.S))
+        {
+            SaveData();
+        }
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            PlayerPrefs.DeleteAll();
+            Debug.Log("Data erased!");
+        }
+
         if (!m_Started)
         {
             if (Input.GetKeyDown(KeyCode.Space))
@@ -66,11 +93,34 @@ public class MainManager : MonoBehaviour
     {
         m_Points += point;
         ScoreText.text = $"Score : {m_Points}";
+        if (HighScoreCount < 1 || m_Points >= HighScoreCount)
+        {
+            HighScoreCount = m_Points;
+            HighScoreText.text = $"HighScore : {HighScoreCount}";
+        }
     }
 
     public void GameOver()
     {
+        SaveData();
         m_GameOver = true;
         GameOverText.SetActive(true);
+    }
+
+    public void SaveData()
+    {
+        //Save to registry
+        Debug.Log("Highscore: " + HighScoreCount);
+        PlayerPrefs.SetString("ppPlayerName", PlayerName);
+        PlayerPrefs.SetInt("ppHighScoreCount", HighScoreCount);
+        Debug.Log("Data Saved: " + "\n" + "PlayerName: " + PlayerName + "\n" + "ppHighScoreCount: " + HighScoreCount);
+    }
+
+    public void LoadData()
+    {
+        //Load from registry
+        PlayerName = PlayerPrefs.GetString("PlayerName");
+        HighScoreCount = PlayerPrefs.GetInt("ppHighScoreCount");
+        Debug.Log("Data Loaded: " + "\n" + "PlayerName: " + PlayerName + "\n" + "ppHighScoreCount: " + HighScoreCount);
     }
 }
