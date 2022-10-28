@@ -13,7 +13,7 @@ public class MainManager : MonoBehaviour
     public Text ScoreText;
     public Text HighScoreText; //
     public int HighScoreCount;
-    public string PlayerName = "NotSet";
+    public string PlayerName;
     public GameObject GameOverText;
 
     private bool m_Started = false;
@@ -31,8 +31,15 @@ public class MainManager : MonoBehaviour
         }
         else
         {
-            PlayerName = "TempUser";
-            HighScoreCount = 0;
+            if (HighScoreCount == 0 || HighScoreCount < 1)
+            {
+                HighScoreCount = 0;
+            }
+            if (PlayerName == "" || PlayerName == null)
+            {
+                PlayerName = "TempUser";
+            }
+            return;
         }
 
         const float step = 0.6f;
@@ -53,6 +60,7 @@ public class MainManager : MonoBehaviour
 
     private void Update()
     {
+        #region DebugKeys
         if (Input.GetKeyDown(KeyCode.L))
         {
             LoadData();
@@ -63,9 +71,15 @@ public class MainManager : MonoBehaviour
         }
         if (Input.GetKeyDown(KeyCode.R))
         {
-            PlayerPrefs.DeleteAll();
-            Debug.Log("Data erased!");
+            DeleteData();
         }
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            ExitApp();
+        }
+        #endregion
+
+        
 
         if (!m_Started)
         {
@@ -96,7 +110,7 @@ public class MainManager : MonoBehaviour
         if (HighScoreCount < 1 || m_Points >= HighScoreCount)
         {
             HighScoreCount = m_Points;
-            HighScoreText.text = $"HighScore : {HighScoreCount}";
+            HighScoreText.text = $"HighScore : {HighScoreCount}" + "\n" + "PlayerName: " + PlayerName;
         }
     }
 
@@ -110,10 +124,21 @@ public class MainManager : MonoBehaviour
     public void SaveData()
     {
         //Save to registry
-        Debug.Log("Highscore: " + HighScoreCount);
-        PlayerPrefs.SetString("ppPlayerName", PlayerName);
-        PlayerPrefs.SetInt("ppHighScoreCount", HighScoreCount);
-        Debug.Log("Data Saved: " + "\n" + "PlayerName: " + PlayerName + "\n" + "ppHighScoreCount: " + HighScoreCount);
+        if (PlayerName == null)
+        {
+            PlayerName = "Unknown User at save";
+        }
+        if (HighScoreCount > 0)
+        {
+            PlayerPrefs.SetString("ppPlayerName", PlayerName);
+            PlayerPrefs.SetInt("ppHighScoreCount", HighScoreCount);
+            Debug.Log("Data Saved: " + "\n" + "PlayerName: " + PlayerName + "\n" + "ppHighScoreCount: " + HighScoreCount);
+        }
+        else
+        {
+            Debug.Log("No new data/highscore!");
+            return;
+        }
     }
 
     public void LoadData()
@@ -122,5 +147,17 @@ public class MainManager : MonoBehaviour
         PlayerName = PlayerPrefs.GetString("PlayerName");
         HighScoreCount = PlayerPrefs.GetInt("ppHighScoreCount");
         Debug.Log("Data Loaded: " + "\n" + "PlayerName: " + PlayerName + "\n" + "ppHighScoreCount: " + HighScoreCount);
+    }
+
+    public void DeleteData()
+    {
+        PlayerPrefs.DeleteAll();
+        Debug.Log("Data erased!");
+    }
+
+    public void ExitApp()
+    {
+        SaveData();
+        Application.Quit();
     }
 }
