@@ -11,12 +11,14 @@ public class MainManager : MonoBehaviour
     public Rigidbody Ball;
 
     public Text ScoreText;
-    public Text HighScoreText; //
-    public int HighScoreCount;
+    private int ScoreCount;
+    public Text HighScoreText;
+    private int HighScoreCount;
 
     public string PlayerName;
 
     public GameObject GameOverText;
+    public GameObject UserInput;
 
     private bool m_Started = false;
     private int m_Points;
@@ -26,6 +28,7 @@ public class MainManager : MonoBehaviour
 
     void Start()
     {
+        ScoreCount = 0;
         if (PlayerPrefs.HasKey("ppHighScoreCount"))
         {
             Debug.Log("The Key: " + "ppHighScoreCount" + " Exists!" + "\n" + "Loading save from registry!");
@@ -59,6 +62,7 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
+        
     }
 
     private void Update()
@@ -85,7 +89,6 @@ public class MainManager : MonoBehaviour
         if (!m_Started)
         {
             if (Input.GetKeyDown(KeyCode.Space))
-                //Todo: Bernard Ask for username, fill last used name as default
             {
                 m_Started = true;
                 float randomDirection = Random.Range(-1.0f, 1.0f);
@@ -109,25 +112,21 @@ public class MainManager : MonoBehaviour
     {
         m_Points += point;
         ScoreText.text = $"Score : {m_Points}";
-        if (HighScoreCount < 1 || m_Points >= HighScoreCount)
-        {
-            HighScoreCount = m_Points;
-            UpdateHighScore();
-        }
     }
 
     public void GameOver()
     {
-        SaveData();
         m_GameOver = true;
         GameOverText.SetActive(true);
+        ScoreCount = m_Points;
+        SaveData();
     }
 
     public void SaveData()
     {
-        if (PlayerName == null)
+        if (PlayerName == null || PlayerName == "")
         {
-            PlayerName = "Unknown User at save";
+            PlayerName = "Unnamed User!";
         }
 
         if (HighScoreCount > 0)
@@ -139,7 +138,6 @@ public class MainManager : MonoBehaviour
         else
         {
             Debug.Log("No new data/highscore!");
-            return;
         }
     }
 
@@ -156,7 +154,6 @@ public class MainManager : MonoBehaviour
             PlayerName = "NewUser(Empty registry)";
         }
         UpdateHighScore();
-        
         Debug.Log("Data Loaded: " + "\n" + "PlayerName: " + PlayerName + "\n" + "ppHighScoreCount: " + HighScoreCount);
     }
 
@@ -166,7 +163,6 @@ public class MainManager : MonoBehaviour
         HighScoreCount = 0;
         PlayerName = "PlayerErased";
         UpdateHighScore();
-
         Debug.Log("Data erased!");
     }
 
@@ -177,6 +173,7 @@ public class MainManager : MonoBehaviour
     }
     public void UpdateHighScore()
     {
+        //UserInput.SetActive(true);
         HighScoreText.text = $"HighScore : {HighScoreCount}" + "\n" + "PlayerName: " + PlayerName;
     }
 }
