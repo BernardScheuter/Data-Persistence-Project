@@ -1,52 +1,42 @@
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
+using System.Xml.Serialization;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class MainManager : MonoBehaviour
 {
+    
     public Brick BrickPrefab;
     public int LineCount = 6;
     public Rigidbody Ball;
 
     public Text ScoreText;
-    private int ScoreCount;
+    private int ScoreCount = 0;
     public Text HighScoreText;
     private int HighScoreCount;
 
-    public string PlayerName;
+    private string PlayerName;
 
     public GameObject GameOverText;
-    public GameObject UserInput;
+    public GameObject UserInputWindow;
 
     private bool m_Started = false;
     private int m_Points;
-
     private bool m_GameOver = false;
-
 
     void Start()
     {
-        ScoreCount = 0;
-        if (PlayerPrefs.HasKey("ppHighScoreCount"))
-        {
-            Debug.Log("The Key: " + "ppHighScoreCount" + " Exists!" + "\n" + "Loading save from registry!");
-            LoadData();
-        }
-        else
-        {
-            if (HighScoreCount == 0 || HighScoreCount < 1)
-            {
-                HighScoreCount = 0;
-            }
-            if (PlayerName == "" || PlayerName == null)
-            {
-                PlayerName = "NewUser(Empty registry)";
-            }
-        }
-
-        Debug.Log("At start before check for null etc.:" + "\n" + "PlayerName: " + PlayerName + "\n" + "ppHighScoreCount: " + HighScoreCount);
+        UserInputWindow.SetActive(false);
+        Load(); //load from disk if savefile (HighScoreSave.json) exists
+        PlayerPrefs.DeleteAll(); // clear local score
+        PlayerPrefs.SetString("ppPlayerName", PlayerName);
+        PlayerPrefs.SetInt("ppHighScoreCount", HighScoreCount);
+        UpdateHighScore();
+        Debug.Log("Loaded from disk at start:" + "\n" + "PlayerName: " + PlayerName + ", " + "HighScoreCount: " + HighScoreCount);
 
         const float step = 0.6f;
         int perLine = Mathf.FloorToInt(4.0f / step);
@@ -62,24 +52,12 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
-        
+
     }
 
     private void Update()
     {
         #region DebugKeys
-        if (Input.GetKeyDown(KeyCode.L))
-        {
-            LoadData();
-        }
-        if (Input.GetKeyDown(KeyCode.S))
-        {
-            SaveData();
-        }
-        if (Input.GetKeyDown(KeyCode.R))
-        {
-            DeleteData();
-        }
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             ExitApp();
@@ -99,6 +77,7 @@ public class MainManager : MonoBehaviour
                 Ball.AddForce(forceDir * 2.0f, ForceMode.VelocityChange);
             }
         }
+
         else if (m_GameOver)
         {
             if (Input.GetKeyDown(KeyCode.Space))
@@ -119,29 +98,58 @@ public class MainManager : MonoBehaviour
         m_GameOver = true;
         GameOverText.SetActive(true);
         ScoreCount = m_Points;
-        SaveData();
+        if (ScoreCount > HighScoreCount)
+        {
+            GetuserName();
+        }
+        else { return; }
     }
-
-    public void SaveData()
+    public void GetuserName()
     {
-        if (PlayerName == null || PlayerName == "")
-        {
-            PlayerName = "Unnamed User!";
-        }
-
-        if (HighScoreCount > 0)
-        {
-            PlayerPrefs.SetString("ppPlayerName", PlayerName);
-            PlayerPrefs.SetInt("ppHighScoreCount", HighScoreCount);
-            Debug.Log("Data Saved: " + "\n" + "PlayerName: " + PlayerName + "\n" + "ppHighScoreCount: " + HighScoreCount);
-        }
-        else
-        {
-            Debug.Log("No new data/highscore!");
-        }
+        UserInputWindow?.SetActive(true);
     }
 
-    public void LoadData()
+    public void ReadInputField(Text userName)
+    {
+        PlayerName = userName.text;
+        Debug.Log("UserName bij ReadInputField: "+ userName.text);
+        HighScoreCount = ScoreCount;
+        Debug.Log("ReadInputField()" + "\n" + PlayerName.ToString());
+        SaveDataToReg(PlayerName, HighScoreCount);
+        Save();
+        CloseUserInputWindow();
+    }
+
+    public void CloseUserInputWindow()
+    {
+        UserInputWindow.SetActive(false);
+    }
+
+    public void UpdateHighScore()
+    {
+        HighScoreText.text = $"HighScore : {HighScoreCount}" + "\n" + "PlayerName: " + PlayerName;
+    }
+
+    #region DatainRegister
+    public void SaveDataToReg(string _name, int _score)
+    {
+        if (_name == null || _name == "")
+        {
+            _name = "Unnamed User!";
+        }
+        PlayerPrefs.SetString("ppPlayerName", _name);
+        PlayerPrefs.SetInt("ppHighScoreCount", _score);
+        Debug.Log("SaveDataToReg(): " + "\n" + "PlayerName: " + _name + "\n" + "ppHighScoreCount: " + _score);
+    }
+    public void DeleteDataFromReg()
+    {
+        PlayerPrefs.DeleteAll();
+        HighScoreCount = 0;
+        PlayerName = "PlayerErased";
+        UpdateHighScore();
+        Debug.Log("Data erased!");
+    }
+    public void LoadDataFromReg()
     {
         HighScoreCount = PlayerPrefs.GetInt("ppHighScoreCount", 0);
         if (HighScoreCount == 0 || HighScoreCount < 1)
@@ -156,24 +164,45 @@ public class MainManager : MonoBehaviour
         UpdateHighScore();
         Debug.Log("Data Loaded: " + "\n" + "PlayerName: " + PlayerName + "\n" + "ppHighScoreCount: " + HighScoreCount);
     }
+    #endregion
 
-    public void DeleteData()
+    [System.Serializable]
+    public class DiskAccess
     {
-        PlayerPrefs.DeleteAll();
-        HighScoreCount = 0;
-        PlayerName = "PlayerErased";
-        UpdateHighScore();
-        Debug.Log("Data erased!");
+        public string Name;
+        public int Score;
+    }
+
+    public void Save()
+    {
+        DiskAccess currentSave = new DiskAccess
+        {
+            Name = PlayerName,
+            Score = HighScoreCount
+        };
+
+        File.WriteAllText(Application.persistentDataPath + "/HighScoreSave.json", JsonUtility.ToJson(currentSave));
+    }
+
+    public void Load()
+    {
+        string path = Application.persistentDataPath + "/HighScoreSave.json";
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            DiskAccess loadData = JsonUtility.FromJson<DiskAccess>(json);
+            PlayerName = loadData.Name;
+            HighScoreCount = loadData.Score;
+        }
+        else return;
     }
 
     public void ExitApp()
     {
-        SaveData();
+        Save();
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#endif
         Application.Quit();
-    }
-    public void UpdateHighScore()
-    {
-        //UserInput.SetActive(true);
-        HighScoreText.text = $"HighScore : {HighScoreCount}" + "\n" + "PlayerName: " + PlayerName;
     }
 }

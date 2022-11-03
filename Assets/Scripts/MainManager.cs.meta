@@ -3,7 +3,13 @@ guid: d110623a642692246a42fbc2d8d89884
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - BrickPrefab: {fileID: 897975713663390409, guid: 63f25b9733d2bcd4fa2ff6de1264c739, type: 3}
+  - Ball: {instanceID: 0}
+  - ScoreText: {instanceID: 0}
+  - HighScoreText: {instanceID: 0}
+  - GameOverText: {instanceID: 0}
+  - UserInput: {instanceID: 0}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 
